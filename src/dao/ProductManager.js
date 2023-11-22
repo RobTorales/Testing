@@ -18,6 +18,14 @@ class ProductManager {
         }
     }
 
+    getProductsViews =async ()=>{
+        try {
+            return await productModel.find().lean();
+        } catch (error) {
+            return error
+        }
+      }
+
     async updateProduct(id, product) {
         try {
             if (this.validateId(id)) {   

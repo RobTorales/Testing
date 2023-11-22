@@ -6,6 +6,7 @@ import { allowInsecurePrototypeAccess } from '@handlebars/allow-prototype-access
 import { Server } from "socket.io";
 import mongoose from "mongoose";
 import MongoStore from "connect-mongo";
+import MessagesManager from "./dao/messagesmanager.js";
 import ProductManager from "./dao/ProductManager.js";
 import ChatManager from "./dao/ChatManager.js";
 import productsRouter from "./routes/products.router.js";
@@ -93,28 +94,53 @@ app.use("/apidocs",swaggerUIExpress.serve, swaggerUIExpress.setup(specs));
 
 
 
-socketServer.on("connection", (socket) => {
-    console.log("Nueva Conexión!");
 
-    const products = PM.getProducts();
-    socket.emit("realTimeProducts", products);
 
-    socket.on("nuevoProducto", (data) => {
-        const product = {title:data.title, description:"", code:"", price:data.price, status:"", stock:10, category:"", thumbnails:data.thumbnails};
-        PM.addProduct(product);
-        const products = PM.getProducts();
-        socket.emit("realTimeProducts", products);
+
+const MM = new MessagesManager();
+
+
+
+
+socketServer.on("connection", async (socket) => {
+  console.log("Un cliente se ha conectado");
+
+  const allProducts = await PM.getProducts();
+  socket.emit("initial_products", allProducts);
+
+  socket.on("addProduct", async(obj)=>{
+    await PM.addProduct(obj);
+    const listadeproductos = await PM.getProductsViews();
+    socketServer.emit("envioDeProductos", listadeproductos);    
+});
+
+  socket.on("deleteProduct",async(id)=>{
+    console.log(id);
+    const listadeproductos=await PM.getProductsViews();
+    
+    await PM.deleteProduct(id);
+    
+    socketServer.emit("envioDeProducts", listadeproductos);
     });
 
-    socket.on("eliminarProducto", (data) => {
-        PM.deleteProduct(parseInt(data));
-        const products = PM.getProducts();
-        socket.emit("realTimeProducts", products);
+  socket.on("eliminarProducto", (data)=>{
+    PM.deleteProduct(parseInt(data));
+    const listadeproductos = PM.getProducts();
+    socketServer.emit("envioDeProducts", listadeproductos);
+  });
+
+  socket.on("nuevoUsuario",(usuario)=>{
+    console.log("usuario", usuario);
+    socket.broadcast.emit("broadcast", usuario);
     });
 
-    socket.on("newMessage", async (data) => {
-        CM.createMessage(data);
-        const messages = await CM.getMessages();
-        socket.emit("messages", messages);
+  socket.on("disconnect", ()=>{
+    console.log("Usuario desconectado");
     });
+
+  socket.on("mensaje", async (info) =>{
+    console.log(info);
+    await MM.createMessage(info);
+    socketServer.emit("chat", await MM.getMessages());
+});
 });
