@@ -11,7 +11,7 @@ productsRouter.get("/", productController.getProducts);
 productsRouter.get("/:pid", productController.getProductById);
 
 
-productsRouter.post("/",passportCall('jwt'), authorization(['admin', 'premium']), productController.addProducts);
+productsRouter.post("/",passportCall('jwt'), authorization(['admin', 'premium']), productController.addProduct);
 
 
 productsRouter.put("/:pid",passportCall('jwt'), authorization(['admin']), productController.updateProduct);
